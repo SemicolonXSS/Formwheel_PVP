@@ -20,7 +20,7 @@ footer{text-align:center;color:var(--muted);padding:20px}@media(max-width:780px)
 </style></head><body>
 <header><div><h1>⚔️ Formwheel PVP</h1><p style="margin:6px 0 0">플레이하고, 직접 만들고, 다시 대결!</p></div><a class="btn" href="https://semicolonxss.github.io/Formwheel/">← Formwheel Hub</a></header>
 <main><div class="top"><a class="btn" href="./index.html">⚔️ 앱 방식 플레이로 돌아가기</a><button data-home class="primary">⌂ 홈</button><button data-tab="test">🎮 플레이</button><button data-tab="maps">🗺️ 맵 제작</button><button data-tab="weapons">✨ 무기 제작</button></div><section id="home"><h2>무엇을 할까요?</h2><div class="mode-cards"><button class="mode-card" id="playMode"><span>🎮 BATTLE</span><strong>플레이</strong><span>기본 또는 커스텀 맵과 무기로 AI와 대결!</span></button><button class="mode-card" id="createMode"><span>🛠️ CREATOR</span><strong>제작</strong><span>나만의 맵과 무기를 만들고 실전에 사용!</span></button></div><p class="help">제작한 맵·무기를 저장하면 플레이의 선택 목록에 자동으로 추가됩니다.</p></section>
-<section id="maps" hidden><div class="grid"><div><h2>맵 에디터</h2><div class="toolbar" id="tiles"></div><canvas id="map" width="672" height="432" aria-label="타일을 클릭하거나 드래그하여 맵 편집"></canvas><p class="help">클릭하거나 드래그하여 타일 배치 · 플레이어 시작점 A/B는 각각 하나씩만 배치할 수 있어요.</p><div class="controls"><button id="blank">빈 맵</button><button id="sample">기본 맵</button><button id="undo">↶ 되돌리기</button></div></div>
+<section id="maps" hidden><div class="grid"><div><h2>맵 에디터</h2><div class="toolbar" id="tiles"></div><canvas id="map" width="672" height="432" aria-label="타일을 클릭하거나 드래그하여 맵 편집"></canvas><p class="help">클릭하거나 드래그하여 타일 배치 · 플레이어 시작점 A/B는 각각 하나씩만 배치할 수 있어요. ◇ 에너지 장벽은 이동만 막고 공격은 통과시켜요.</p><div class="controls"><button id="blank">빈 맵</button><button id="sample">기본 맵</button><button id="undo">↶ 되돌리기</button></div></div>
 <div><label for="mapName">맵 이름</label><input id="mapName" maxlength="32" value="나의 첫 맵"><label for="mapDesc">설명</label><input id="mapDesc" maxlength="100" placeholder="맵 소개"><p class="help">28×18 타일 · 지형별 색상으로 표시됩니다.</p><button class="primary" id="saveMap">맵 저장</button><button id="exportMap">JSON 내보내기</button><h2 style="margin-top:24px">내 맵</h2><div id="mapList" class="cards"></div></div></div></section>
 <section id="weapons" hidden><div class="grid"><div><h2>무기 제작기</h2><label for="weaponName">무기 이름</label><input id="weaponName" maxlength="28" value="별빛 발사기"><label for="weaponType">공격 방식</label><select id="weaponType"><option value="projectile">에너지탄</option><option value="melee">근접 충격파</option></select>
 <label for="weaponDamage">공격력 <output id="damageOut"></output></label><input id="weaponDamage" type="range" min="3" max="50" value="16">
@@ -36,12 +36,12 @@ footer{text-align:center;color:var(--muted);padding:20px}@media(max-width:780px)
 (()=>{'use strict';
 const W=28,H=18,C=24,KEY='formwheel-pvp-studio-v1',MAX=12;
 const $=id=>document.getElementById(id);
-const T=[{v:0,n:'바닥',c:'#243555',e:'·'},{v:1,n:'벽',c:'#67758d',e:'■'},{v:2,n:'엄폐물',c:'#785b43',e:'▣'},{v:3,n:'점프 패드',c:'#168b7d',e:'↥'},{v:4,n:'시작 A',c:'#3b82f6',e:'A'},{v:5,n:'시작 B',c:'#f97316',e:'B'}];
+const T=[{v:0,n:'바닥',c:'#243555',e:'·'},{v:1,n:'벽',c:'#67758d',e:'■'},{v:2,n:'엄폐물',c:'#785b43',e:'▣'},{v:3,n:'점프 패드',c:'#168b7d',e:'↥'},{v:4,n:'시작 A',c:'#3b82f6',e:'A'},{v:5,n:'시작 B',c:'#f97316',e:'B'},{v:6,n:'에너지 장벽 (탄환 통과)',c:'#6d4fd4',e:'◇'}];
 let db={maps:[],weapons:[]},grid=[],tool=1,history=[],draw=false,player={x:2,y:2},target={x:25,y:15,hp:100},shots=[],keys=new Set(),lastFire=0,lastFrame=0,testMap=null,testWeapon=null,aiWeapon=null,aiLevel=1,aiMoveAt=0,aiFireAt=0,aiAim={x:0,y:0},active=false;
 function toast(s){const n=$('notice');n.textContent=s;n.classList.remove('hide');clearTimeout(toast.t);toast.t=setTimeout(()=>n.classList.add('hide'),2600)}
 function uid(){return (crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2))}
 function base(){const a=Array.from({length:H},(_,y)=>Array.from({length:W},(_,x)=>x===0||y===0||x===W-1||y===H-1?1:0));a[2][2]=4;a[15][25]=5;return a}
-function validGrid(a){return Array.isArray(a)&&a.length===H&&a.every(r=>Array.isArray(r)&&r.length===W&&r.every(v=>Number.isInteger(v)&&v>=0&&v<=5))}
+function validGrid(a){return Array.isArray(a)&&a.length===H&&a.every(r=>Array.isArray(r)&&r.length===W&&r.every(v=>Number.isInteger(v)&&v>=0&&v<=6))}
 function point(a,v){for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(a[y][x]===v)return {x,y};return null}
 function validateMap(m){return m&&typeof m.name==='string'&&m.name.length<=32&&validGrid(m.grid)&&point(m.grid,4)&&point(m.grid,5)}
 function validWeapon(w){return w&&typeof w.name==='string'&&w.name.length<=28&&['projectile','melee'].includes(w.type)&&Number.isInteger(w.damage)&&w.damage>=3&&w.damage<=50&&Number.isInteger(w.range)&&w.range>=1&&w.range<=12&&Number.isInteger(w.rate)&&w.rate>=200&&w.rate<=1300&&Number.isInteger(w.speed)&&w.speed>=3&&w.speed<=14&&['#fb923c','#60a5fa','#a78bfa','#4ade80','#f472b6'].includes(w.color)&&cost(w)<=85}
@@ -50,7 +50,7 @@ function persist(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toa
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'{}');db.maps=(d.maps||[]).filter(validateMap).slice(0,MAX);db.weapons=(d.weapons||[]).filter(validWeapon).slice(0,MAX)}catch(e){db={maps:[],weapons:[]}}}
 function createEl(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e}
 function download(filename,data){const a=createEl('a');const u=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.href=u;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
-function drawGrid(ctx,a){ctx.clearRect(0,0,W*C,H*C);for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=a[y][x];ctx.fillStyle=T[v].c;ctx.fillRect(x*C,y*C,C,C);ctx.strokeStyle='#ffffff10';ctx.strokeRect(x*C+.5,y*C+.5,C-1,C-1);if(v===3||v===4||v===5){ctx.fillStyle='#fff';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText(T[v].e,x*C+12,y*C+17)}}}
+function drawGrid(ctx,a){ctx.clearRect(0,0,W*C,H*C);for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=a[y][x];ctx.fillStyle=T[v].c;ctx.fillRect(x*C,y*C,C,C);ctx.strokeStyle='#ffffff10';ctx.strokeRect(x*C+.5,y*C+.5,C-1,C-1);if(v===3||v===4||v===5||v===6){ctx.fillStyle='#fff';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText(T[v].e,x*C+12,y*C+17)}}}
 function renderMap(){drawGrid($('map').getContext('2d'),grid)}
 function selectTile(v){tool=v;document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('active',Number(b.dataset.tile)===v))}
 T.forEach(t=>{const b=createEl('button',t.e+' '+t.n);b.className='tile';b.dataset.tile=t.v;b.addEventListener('click',()=>selectTile(t.v));$('tiles').append(b)});selectTile(1);
@@ -74,7 +74,8 @@ function switchTab(name){$('home').hidden=true;for(const id of ['maps','weapons'
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.querySelector('[data-home]').onclick=()=>{active=false;$('home').hidden=false;for(const id of ['maps','weapons','test'])$(id).hidden=true;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('active'))};$('playMode').onclick=()=>switchTab('test');$('createMode').onclick=()=>switchTab('maps');$('goMakeMap').onclick=()=>switchTab('maps');$('goMakeWeapon').onclick=()=>switchTab('weapons');
 const defaultW={name:'연습 에너지탄',type:'projectile',damage:16,range:7,rate:550,speed:8,color:'#fb923c'};
 function resetArena(){testMap=db.maps.find(m=>m.id===$('testMap').value)||{grid:base()};testWeapon=db.weapons.find(w=>w.id===$('testWeapon').value)||defaultW;player={...point(testMap.grid,4),hp:100,face:1};target={...point(testMap.grid,5),hp:100};aiLevel=+$('aiLevel').value||1;const pool=[defaultW,{...defaultW,name:'돌격 블래스터',damage:11,rate:350,range:7,color:'#60a5fa'},{...defaultW,name:'정밀 광선',damage:22,rate:850,range:11,color:'#a78bfa'},{...defaultW,name:'충격파',type:'melee',damage:32,range:2,rate:650,color:'#4ade80'},...db.weapons];aiWeapon=pool[Math.floor(Math.random()*pool.length)];$('aiLoadout').textContent='AI Lv.'+aiLevel+' · 랜덤 무기: '+aiWeapon.name;shots=[];active=true;lastFire=0;aiMoveAt=0;aiFireAt=0;aiAim={x:0,y:0};status();drawArena()}
-function solid(x,y){return !testMap||!testMap.grid[y]||[1,2].includes(testMap.grid[y][x])}
+function solid(x,y){return !testMap||!testMap.grid[y]||[1,2,6].includes(testMap.grid[y][x])}
+function shotSolid(x,y){return !testMap||!testMap.grid[y]||[1,2].includes(testMap.grid[y][x])}
 function move(dx,dy){if(!active)return;const x=player.x+dx,y=player.y+dy;if(x<0||x>=W||y<0||y>=H||solid(x,y)||x===target.x&&y===target.y)return;player.x=x;player.y=y;if(dx)player.face=dx;else if(dy)player.face=dy>0?1:-1;if(testMap.grid[y][x]===3){const nx=x+dx*2,ny=y+dy*2;if(nx>0&&ny>0&&nx<W-1&&ny<H-1&&!solid(nx,ny)){player.x=nx;player.y=ny}}drawArena()}
 function attack(){if(!active)return;const now=performance.now();if(now-lastFire<testWeapon.rate)return;lastFire=now;const dx=target.x-player.x,dy=target.y-player.y,dist=Math.hypot(dx,dy);if(dist===0)return;if(testWeapon.type==='melee'){if(dist<=Math.min(2,testWeapon.range) && clearSight(player.x,player.y,target.x,target.y)){target.hp=Math.max(0,target.hp-testWeapon.damage)}shots.push({x:player.x+.5,y:player.y+.5,vx:0,vy:0,life:150,melee:true,color:testWeapon.color})}else{shots.push({x:player.x+.5,y:player.y+.5,vx:dx/dist*testWeapon.speed/1000,vy:dy/dist*testWeapon.speed/1000,life:testWeapon.range*1000/testWeapon.speed,melee:false,color:testWeapon.color,owner:'player',damage:testWeapon.damage})}status();drawArena()}
 function status(){if(target.hp<=0){active=false;$('arenaStatus').textContent='🎉 승리! AI를 이겼어요 · 내 HP '+player.hp}else if(player.hp<=0){active=false;$('arenaStatus').textContent='AI 승리! 난이도를 조절하거나 다시 도전해 보세요'}else $('arenaStatus').textContent='나 HP '+player.hp+' / 100 · AI HP '+target.hp+' / 100'}
@@ -91,7 +92,7 @@ function aiStep(){
  if(Math.random()<.12*(11-aiLevel)/10)return;
  if(!solid(cur[0],cur[1])){target.x=cur[0];target.y=cur[1]}
 }
-function clearSight(x1,y1,x2,y2){const n=Math.ceil(Math.hypot(x2-x1,y2-y1)*5);for(let i=1;i<n;i++){const x=Math.floor(x1+(x2-x1)*i/n),y=Math.floor(y1+(y2-y1)*i/n);if(solid(x,y))return false}return true}
+function clearSight(x1,y1,x2,y2){const n=Math.ceil(Math.hypot(x2-x1,y2-y1)*5);for(let i=1;i<n;i++){const x=Math.floor(x1+(x2-x1)*i/n),y=Math.floor(y1+(y2-y1)*i/n);if(shotSolid(x,y))return false}return true}
 function aiAttack(now){
  if(!active||now<aiFireAt)return;
  aiFireAt=now+aiWeapon.rate*(1.75-(aiLevel-1)*.065);
@@ -108,7 +109,7 @@ function shotWallHit(x1,y1,x2,y2){
   const steps=Math.max(1,Math.ceil(Math.hypot(x2-x1,y2-y1)*8));
   for(let i=0;i<=steps;i++){
     const t=i/steps,x=Math.floor(x1+(x2-x1)*t),y=Math.floor(y1+(y2-y1)*t);
-    if(solid(x,y))return t;
+    if(shotSolid(x,y))return t;
   }
   return null;
 }
