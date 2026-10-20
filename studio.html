@@ -104,7 +104,20 @@ function aiAttack(now){
  shots.push({x:target.x+.5,y:target.y+.5,vx:ax/d*aiWeapon.speed/1000,vy:ay/d*aiWeapon.speed/1000,life:aiWeapon.range*1000/aiWeapon.speed,melee:false,color:aiWeapon.color,owner:'ai',damage:aiWeapon.damage})
 }
 function drawArena(){const ctx=$('arena').getContext('2d');drawGrid(ctx,testMap?testMap.grid:base());if(!testMap)return;for(const [p,color] of [[target,'#f97316'],[player,'#60a5fa']]){ctx.fillStyle=color;ctx.beginPath();ctx.arc((p.x+.5)*C,(p.y+.5)*C,8,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText('YOU',(player.x+.5)*C,(player.y-.2)*C);ctx.fillText('AI '+target.hp,(target.x+.5)*C,(target.y-.2)*C);for(const s of shots){ctx.fillStyle=s.color||testWeapon.color;ctx.beginPath();ctx.arc(s.x*C,s.y*C,s.melee?20:5,0,7);ctx.fill()}}
-function tick(now){const dt=Math.min(35,now-(lastFrame||now));lastFrame=now;if(active&&document.visibilityState==='visible'){const mapping=[['arrowleft',-1,0],['a',-1,0],['arrowright',1,0],['d',1,0],['arrowup',0,-1],['w',0,-1],['arrowdown',0,1],['s',0,1]];if(now-(tick.lastMove||0)>110)for(const [key,dx,dy] of mapping)if(keys.has(key)){move(dx,dy);tick.lastMove=now;break}if(keys.has(' '))attack();if(now>=aiMoveAt){aiStep();aiMoveAt=now+Math.max(115,650-aiLevel*52)}aiAttack(now);for(const s of shots){s.life-=dt;s.x+=s.vx*dt;s.y+=s.vy*dt;if(!s.melee){const x=Math.floor(s.x),y=Math.floor(s.y);if(solid(x,y))s.life=0;else {const victim=s.owner==='ai'?player:target;if(Math.hypot(s.x-victim.x-.5,s.y-victim.y-.5)<.55){victim.hp=Math.max(0,victim.hp-s.damage);s.life=0;status()}}}}shots=shots.filter(s=>s.life>0);if(!$('test').hidden)drawArena()}requestAnimationFrame(tick)}
+function shotWallHit(x1,y1,x2,y2){
+  const steps=Math.max(1,Math.ceil(Math.hypot(x2-x1,y2-y1)*8));
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,x=Math.floor(x1+(x2-x1)*t),y=Math.floor(y1+(y2-y1)*t);
+    if(solid(x,y))return t;
+  }
+  return null;
+}
+function shotPlayerHit(x1,y1,x2,y2,victim){
+  const vx=victim.x+.5,vy=victim.y+.5,dx=x2-x1,dy=y2-y1;
+  const len=dx*dx+dy*dy,t=len?Math.max(0,Math.min(1,((vx-x1)*dx+(vy-y1)*dy)/len)):0;
+  return Math.hypot(x1+dx*t-vx,y1+dy*t-vy)<.55?t:null;
+}
+function tick(now){const dt=Math.min(35,now-(lastFrame||now));lastFrame=now;if(active&&document.visibilityState==='visible'){const mapping=[['arrowleft',-1,0],['a',-1,0],['arrowright',1,0],['d',1,0],['arrowup',0,-1],['w',0,-1],['arrowdown',0,1],['s',0,1]];if(now-(tick.lastMove||0)>110)for(const [key,dx,dy] of mapping)if(keys.has(key)){move(dx,dy);tick.lastMove=now;break}if(keys.has(' '))attack();if(now>=aiMoveAt){aiStep();aiMoveAt=now+Math.max(115,650-aiLevel*52)}aiAttack(now);for(const s of shots){s.life-=dt;const ox=s.x,oy=s.y,nx=ox+s.vx*dt,ny=oy+s.vy*dt;if(!s.melee){const wall=shotWallHit(ox,oy,nx,ny),victim=s.owner==='ai'?player:target,hit=shotPlayerHit(ox,oy,nx,ny,victim);if(wall!==null&&(hit===null||wall<=hit)){s.life=0;s.x=ox+(nx-ox)*wall;s.y=oy+(ny-oy)*wall;}else if(hit!==null){victim.hp=Math.max(0,victim.hp-s.damage);s.life=0;status();s.x=ox+(nx-ox)*hit;s.y=oy+(ny-oy)*hit;}else{s.x=nx;s.y=ny;}}}shots=shots.filter(s=>s.life>0);if(!$('test').hidden)drawArena()}requestAnimationFrame(tick)}
 document.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)||$('test').hidden)return;const key=e.key.toLowerCase();if([' ','arrowleft','arrowright','arrowup','arrowdown'].includes(key))e.preventDefault();keys.add(key)});document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
 document.querySelectorAll('[data-move]').forEach(b=>{const dirs={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]},d=dirs[b.dataset.move];b.onclick=()=>move(...d)});$('fire').onclick=attack;$('loadArena').onclick=resetArena;$('resetArena').onclick=resetArena;
 $('exportAll').onclick=()=>download('formwheel-pvp-backup.json',{kind:'formwheel-pvp-backup',version:1,...db});
