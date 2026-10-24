@@ -48,4 +48,27 @@ actor(p,"#278bd5","P1");actor(a,"#df6e79","AI");for(let b of balls){paintProject
 <style id="secol-share-style">#secol-share-link{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:8000;border:1px solid #aab3c4;border-radius:999px;padding:9px 13px;background:#fff;color:#172033;font:600 13px system-ui;box-shadow:0 2px 10px #0002;cursor:pointer}#secol-share-link:focus-visible{outline:3px solid #e87920;outline-offset:3px}#secol-share-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}</style>
 <button type="button" id="secol-share-link" aria-label="현재 프로젝트 링크 공유">🔗 공유</button><span id="secol-share-status" role="status" aria-live="polite"></span>
 <script>(function(){const b=document.getElementById('secol-share-link'),status=document.getElementById('secol-share-status');if(!b||!status)return;b.addEventListener('click',async()=>{const url=location.origin+location.pathname;try{if(navigator.share){await navigator.share({title:document.title,url});status.textContent='공유 메뉴를 열었습니다.';return}if(navigator.clipboard&&isSecureContext){await navigator.clipboard.writeText(url);status.textContent='프로젝트 주소가 복사되었습니다.';b.textContent='✓ 복사됨';setTimeout(()=>b.textContent='🔗 공유',2000);return}window.prompt('프로젝트 주소를 복사하세요',url);status.textContent='주소를 확인하세요.'}catch(e){if(e.name!=='AbortError'){window.prompt('프로젝트 주소를 복사하세요',url);status.textContent='주소를 확인하세요.'}}})})();</script>
-</body></html>
+<script>
+/* Persist PVP setup only, not active matches or online sessions. */
+(() => {
+ const key="formwheel-pvp-setup-v1";
+ const ids=["weapon","skill","map","difficulty","speed-points"];
+ const controls=()=>ids.map(id=>document.getElementById(id)).filter(Boolean);
+ function save(){
+   try {const data={}; controls().forEach(el=>data[el.id]=el.value);localStorage.setItem(key,JSON.stringify(data));}catch(_){}
+ }
+ try {
+   const data=JSON.parse(localStorage.getItem(key)||"null");
+   if(data&&typeof data==="object"&&!Array.isArray(data)){
+     controls().filter(el=>el.id!=="speed-points").forEach(el=>{
+       if(typeof data[el.id]==="string"&&[...el.options].some(o=>o.value===data[el.id]))el.value=data[el.id];
+     });
+     document.getElementById("weapon")?.dispatchEvent(new Event("change"));
+     const speed=document.getElementById("speed-points");
+     if(speed&&typeof data["speed-points"]==="string"&&[...speed.options].some(o=>o.value===data["speed-points"]))speed.value=data["speed-points"];
+     speed?.dispatchEvent(new Event("change"));
+   }
+ }catch(_){}
+ controls().forEach(el=>el.addEventListener("change",save));
+})();
+</script></body></html>
