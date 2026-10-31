@@ -72,4 +72,62 @@ actor(p,"#278bd5","P1");actor(a,"#df6e79","AI");for(let b of balls){paintProject
  }catch(_){}
  controls().forEach(el=>el.addEventListener("change",save));
 })();
+</script><style>
+#fw-pvp-quickplay{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#fw-pvp-quickplay button{flex:1 1 155px;font-size:14px;min-height:46px;background:#304d78}
+#fw-pvp-record{font-size:13px;color:#c3dcff;margin:10px 0}
+#fw-pvp-quickplay button:focus-visible{outline:3px solid #80e6d5;outline-offset:2px}
+</style>
+<script>
+/* Optional solo quick-play presets and local-only match record.
+   Existing online rooms, loadouts and multiplayer state remain untouched. */
+(()=> {
+ const start=document.getElementById("arena-start");
+ const difficulty=document.getElementById("difficulty");
+ const map=document.getElementById("map");
+ const status=document.getElementById("status");
+ if(!start||!difficulty||!map||!status)return;
+ const bar=document.createElement("div");bar.id="fw-pvp-quickplay";
+ const options=[
+  ["🌱 가볍게 한 판",2,"open"],
+  ["⚔️ 친구 실력 연습",5,"classic"],
+  ["🔥 고수 도전",8,"maze"]
+ ];
+ const note=document.createElement("p");note.id="fw-pvp-record";note.setAttribute("aria-live","polite");
+ const storage="formwheel-pvp-solo-record-v1";
+ let stats={win:0,loss:0,streak:0,best:0};
+ try{const v=JSON.parse(localStorage.getItem(storage)||"null");if(v&&["win","loss","streak","best"].every(k=>Number.isSafeInteger(v[k])&&v[k]>=0))stats=v;}catch(_){}
+ const paint=()=>{note.textContent="🏆 솔로 기록 · "+stats.win+"승 "+stats.loss+"패 · 연승 "+stats.streak+" · 최고 "+stats.best+"연승 (이 기기)";};
+ paint();
+ for(const [label,level,field] of options){
+  const b=document.createElement("button");b.type="button";b.textContent=label;
+  b.title="AI "+level+"단계 · "+field+" 맵으로 솔로 대전을 시작합니다";
+  b.onclick=()=>{
+   if(window.fwPvpOnlineActive){status.textContent="온라인 대전 중에는 빠른 솔로 대전을 시작할 수 없어요.";return;}
+   difficulty.value=String(level);map.value=field;
+   difficulty.dispatchEvent(new Event("change",{bubbles:true}));
+   map.dispatchEvent(new Event("change",{bubbles:true}));
+   start.click();
+   start.scrollIntoView({block:"nearest",behavior:"smooth"});
+  };
+  bar.appendChild(b);
+ }
+ start.parentElement.insertAdjacentElement("afterend",bar);
+ bar.insertAdjacentElement("afterend",note);
+ let last="";
+ const observer=new MutationObserver(()=>{
+  const message=status.textContent.trim();
+  if(message===last)return;
+  last=message;
+  if(window.fwPvpOnlineActive)return;
+  const won=message.startsWith("🏆 승리!");
+  const lost=message.startsWith("AI 승리!");
+  if(!won&&!lost)return;
+  if(won){stats.win++;stats.streak++;stats.best=Math.max(stats.best,stats.streak);}
+  else {stats.loss++;stats.streak=0;}
+  try{localStorage.setItem(storage,JSON.stringify(stats));}catch(_){}
+  paint();
+ });
+ observer.observe(status,{childList:true,subtree:true,characterData:true});
+})();
 </script></body></html>
