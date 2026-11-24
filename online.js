@@ -2,7 +2,7 @@ import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/10.14.1/
 import {getAuth,signInAnonymously,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getDatabase,ref,get,set,update,onValue,runTransaction,onDisconnect} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 const app=getApps()[0]||initializeApp({apiKey:"AIzaSyBreTSe1m0-xlbF4aupnU5isRZCihR25IE",authDomain:"formwheel.firebaseapp.com",databaseURL:"https://formwheel-default-rtdb.firebaseio.com",projectId:"formwheel",appId:"1:431583088241:web:74e0e34ea1e3e1170c55d0"});
-const auth=getAuth(app),db=getDatabase(app),ROOT="formwheelV2/pvpRooms",el=id=>document.getElementById(id);
+const auth=getAuth(app),db=getDatabase(app),ROOT="formwheelV2/pvpRooms/v2",el=id=>document.getElementById(id);
 let lastRound=-1;let me=null,code="",host=false,room=null,stopRoom=null,stopInput=null,loop=null,sendLoop=null,state=null,remoteInput={},lastOpponent=0,ended=false;
 const status=s=>el("online-status").textContent=s;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),norm=(x,y)=>{let d=Math.hypot(x,y)||1;return{x:x/d,y:y/d}};
@@ -19,26 +19,70 @@ function targetHit(x1,y1,x2,y2,target,radius){const dx=x2-x1,dy=y2-y1,fx=x1-targ
 const POINT_CAP=10,weaponPoints={orb:3,wave:3,spark:4,cannon:4,swift:3,frost:4,burst:3,arc:4,heavy:5,needle:4},skillPoints={dream:4,shield:4,dash:3,heal:4,blink:4,boost:4,slow:3,barrier:5};
 function loadoutHP(b){if(!b||!weaponOk(b.weapon)||!skillOk(b.skill))return null;const remaining=POINT_CAP-weaponPoints[b.weapon]-skillPoints[b.skill]-Math.max(0,Math.floor(Number(b.speedPoints)||0));return remaining<0?null:100+remaining*15;}
 const build=()=>({weapon:el("weapon").value,skill:el("skill").value,speedPoints:Number(el("speed-points").value||0)});
-async function identity(){if(auth.currentUser)return auth.currentUser;return (await signInAnonymously(auth)).user;}
+async function identity(){await auth.authStateReady();if(auth.currentUser)return auth.currentUser;return (await signInAnonymously(auth)).user;}
 function cleanup(){clearInterval(loop);clearInterval(sendLoop);loop=sendLoop=null;stopRoom?.();stopInput?.();stopRoom=stopInput=null;window.fwPvpOnlineActive=false;code="";room=null;state=null;ended=false;lastRound=-1;el("online-exit").hidden=true;el("online-ready").hidden=true;el("online-code").textContent="—";el("arena-start").disabled=false;el("map").disabled=false;}
-async function exit(){const old=code,role=host;cleanup();if(old&&me){try{const target=ref(db,ROOT+"/"+old);await runTransaction(target,v=>{if(!v)return;if(role&&v.hostUid===me.uid){v.status="ended";v.updatedAt=Date.now();return v;}if(!role&&v.guestUid===me.uid){v.guestUid=null;v.status="waiting";v.updatedAt=Date.now();return v;}},{applyLocally:false})}catch(e){console.warn(e)}}status("온라인 방에서 나왔어요.");}
+async function exit(){
+ const old=code;
+ cleanup();
+ if(old&&me){
+  try{await set(ref(db,ROOT+"/"+old+"/status"),"ended");}
+  catch(error){status("방 종료를 저장하지 못했어요: "+error.message);return;}
+ }
+ status("온라인 방에서 나왔어요.");
+}
 window.fwPvpExitOnline=exit;el("online-exit").onclick=exit;
 async function init(kind){if(loadoutHP(build())===null){status("포인트 제한을 초과했어요.");return;}if(code)await exit();try{me=await identity();el("arena-start").disabled=true;window.fwPvpOnlineActive=true;window.fwPvpStopSolo?.();if(kind==="create"){host=true;for(let i=0;i<8;i++){let chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",arr=crypto.getRandomValues(new Uint8Array(6)),candidate=Array.from(arr,n=>chars[n%chars.length]).join("");const claimed=await runTransaction(ref(db,ROOT+"/"+candidate),v=>v===null?{hostUid:me.uid,guestUid:null,status:"waiting",readyHost:false,readyGuest:false,createdAt:Date.now(),updatedAt:Date.now(),hostBuild:build(),map:el("map").value}:undefined,{applyLocally:false});if(claimed.committed){const verified=(await get(ref(db,ROOT+"/"+candidate))).val();if(!verified||verified.hostUid!==me.uid)throw Error("방 저장 확인에 실패했어요. Firebase 데이터베이스의 방 경로/읽기 규칙을 확인해 주세요.");code=candidate;break}}if(!code)throw Error("방 코드를 발급하지 못했어요.");}
-else{host=false;const candidate=el("join-code").value.trim().toUpperCase();if(!safeCode(candidate))throw Error("6자리 방 코드를 입력해 주세요.");const roomRef=ref(db,ROOT+"/"+candidate);const snapshot=await get(roomRef),existing=snapshot.val();if(!existing)throw Error("방 코드 "+candidate+"를 Firebase에서 찾지 못했어요. 방장과 참가자가 모두 https://semicolonxss.github.io/Formwheel_PVP/ 에서 새로고침 후 새 방을 만들어 주세요. (DB 경로: "+ROOT+"/"+candidate+")");if(existing.hostUid===me.uid)throw Error("방장과 같은 계정(게스트 포함)으로 접속했어요. 다른 브라우저나 별도 계정으로 참가해 주세요.");if(existing.guestUid&&existing.guestUid!==me.uid)throw Error("이미 다른 참가자가 있는 방이에요.");if(!["waiting","ready"].includes(existing.status))throw Error("이 방은 이미 시작됐거나 종료됐어요. 새 방을 만들어 주세요.");if(Date.now()-(existing.updatedAt||existing.createdAt)>600000)throw Error("10분이 지나 만료된 방이에요. 방장이 새 방을 만들어 주세요.");const joined=await runTransaction(roomRef,v=>{if(!v||!["waiting","ready"].includes(v.status)||(v.guestUid&&v.guestUid!==me.uid)||v.hostUid===me.uid||Date.now()-(v.updatedAt||v.createdAt)>600000)return;v.guestUid=me.uid;v.guestBuild=build();v.status="ready";v.readyGuest=false;v.updatedAt=Date.now();return v;},{applyLocally:false});if(!joined.committed){const latest=(await get(roomRef)).val();if(!latest)throw Error("방이 삭제되었어요. 방장에게 새 코드를 요청해 주세요.");if(latest.hostUid===me.uid)throw Error("방장과 같은 계정으로 접속했어요. 다른 계정 또는 별도의 게스트 세션으로 참가해 주세요.");if(latest.guestUid===me.uid){code=candidate;}else if(latest.guestUid)throw Error("이미 다른 참가자가 입장했어요.");else if(latest.status!=="waiting")throw Error("방이 더 이상 대기 상태가 아니에요 ("+latest.status+"). 방장에게 새 방 생성을 요청해 주세요.");else if(Date.now()-(latest.updatedAt||latest.createdAt)>600000)throw Error("방이 만료됐어요. 방장이 새 방을 만들어 주세요.");else throw Error("동시 접속으로 참가가 충돌했어요. 잠시 후 다시 참가해 주세요.");}code=candidate;}
+else{
+ host=false;
+ const candidate=el("join-code").value.trim().toUpperCase();
+ if(!safeCode(candidate))throw Error("6자리 방 코드를 입력해 주세요.");
+ const target=ref(db,ROOT+"/"+candidate);
+ const existing=(await get(target)).val();
+ if(!existing)throw Error("방이 없어요. 방장에게 코드를 확인해 주세요.");
+ if(existing.hostUid===me.uid)throw Error("다른 계정이나 별도의 게스트 세션으로 참가해 주세요.");
+ if(existing.status!=="waiting")throw Error("이미 시작되었거나 종료된 방이에요.");
+ if(!existing.guest){
+  if(Date.now()-existing.createdAt>600000)throw Error("방이 만료됐어요. 새 방을 만들어 주세요.");
+  await set(ref(db,ROOT+"/"+candidate+"/guest"),{uid:me.uid,build:build()});
+ }else if(existing.guest.uid!==me.uid)throw Error("이미 다른 참가자가 있어요.");
+ code=candidate;
+}
 el("online-code").textContent=code;el("online-exit").hidden=false;el("online-ready").hidden=false;el("online-ready").disabled=false;el("online-ready").textContent="▶ 온라인 시작";status(host?"친구를 기다리는 중이에요. 방 코드 "+code+" 공유!":"방 참가 완료! 게임 동기화 중…");el("status").textContent="온라인 PVP";
-const r=ref(db,ROOT+"/"+code);stopRoom=onValue(r,snap=>{const data=snap.val();if(!data){status("방이 삭제되었어요.");cleanup();return;}room=data;if(data.map&&maps[data.map])el("map").value=data.map;el("map").disabled=true;if(data.status==="ended"){status("상대가 나가 게임이 종료되었어요.");cleanup();return;}if(data.status==="ready"){status((host?"방장":"참가자")+" 준비: 온라인 시작 버튼을 누르면 준비 완료! 상대도 터치하면 시작합니다.");}if(data.status==="waiting"&&data.readyHost)status("준비 완료! 친구가 입장하고 경기장을 터치할 때까지 기다리는 중…");if(data.status==="rematch"){clearInterval(loop);clearInterval(sendLoop);loop=sendLoop=null;stopInput?.();stopInput=null;ended=false;lastRound=-1;el("online-ready").hidden=false;el("online-ready").disabled=host?!!data.readyHost:!!data.readyGuest;el("online-ready").textContent="↻ 재대결 준비";status("재대결 대기 중! 두 사람이 준비하면 다시 시작해요.");}
+const r=ref(db,ROOT+"/"+code);stopRoom=onValue(r,snap=>{const data=snap.val();if(!data){status("방이 삭제되었어요.");cleanup();return;}room=data;if(host)void startReadyRound(code,data);if(data.map&&maps[data.map])el("map").value=data.map;el("map").disabled=true;if(data.status==="ended"){status("상대가 나가 게임이 종료되었어요.");cleanup();return;}if(data.status==="ready"){status((host?"방장":"참가자")+" 준비: 온라인 시작 버튼을 누르면 준비 완료! 상대도 터치하면 시작합니다.");}if(data.status==="waiting"&&data.readyHost)status("준비 완료! 친구가 입장하고 경기장을 터치할 때까지 기다리는 중…");if(data.status==="rematch"){clearInterval(loop);clearInterval(sendLoop);loop=sendLoop=null;stopInput?.();stopInput=null;ended=false;lastRound=-1;el("online-ready").hidden=false;el("online-ready").disabled=host?!!data.readyHost:!!data.readyGuest;el("online-ready").textContent="↻ 재대결 준비";status("재대결 대기 중! 두 사람이 준비하면 다시 시작해요.");}
 if(data.status==="playing"){el("online-ready").hidden=true;if(lastRound!==data.round){lastRound=data.round??0;ended=false;clearInterval(loop);clearInterval(sendLoop);loop=sendLoop=null;stopInput?.();stopInput=null;}}
 if(data.status==="playing"&&data.state?.winner!=null){el("online-ready").hidden=false;el("online-ready").disabled=false;el("online-ready").textContent="↻ 재대결 신청";}
-if(data.status==="playing"&&host&&!loop)hostStart();if(data.status==="playing"&&!host&&!sendLoop)guestStart();if(!host&&data.state){state=data.state;render(state);if(state.winner!==undefined&&state.winner!==null)status(state.winner===1?"🏆 승리!":"상대 승리!");}if(host&&data.status==="waiting")status("친구를 기다리는 중 · 코드 "+code);},e=>{status("DB 접근 오류: "+e.message+" · Firebase 규칙을 확인해 주세요.");cleanup();});
+if(data.status==="playing"&&host&&!loop)hostStart();if(data.status==="playing"&&!host&&!sendLoop)guestStart();if(!host&&data.state){state=data.state;render(state);if(state.winner!==undefined&&state.winner!==null)status(state.winner===1?"🏆 승리!":"상대 승리!");}if(data.status==="waiting"){
+ el("online-ready").disabled=host?data.readyHost:data.readyGuest;
+ if(host&&!data.guest)status("친구를 기다리는 중 · 코드 "+code);
+}if(data.status==="playing"&&data.state?.winner!=null)el("online-ready").disabled=host?data.readyHost:data.readyGuest;},e=>{status("DB 접근 오류: "+e.message+" · Firebase 규칙을 확인해 주세요.");cleanup();});
 }catch(e){cleanup();status("연결 실패: "+e.message+(e.code?" [오류 코드: "+e.code+"]":""));}}
 el("online-create").onclick=()=>init("create");el("online-join").onclick=()=>init("join");
 el("online-copy").onclick=async()=>{if(!code)return;try{await navigator.clipboard.writeText(code);status("코드를 복사했어요: "+code)}catch{status("방 코드: "+code)}};
-el("online-ready").onclick=async()=>{if(!code||!room||!["waiting","ready","playing","rematch"].includes(room.status))return;const r=ref(db,ROOT+"/"+code);try{await runTransaction(r,v=>{if(!v||!["waiting","ready","playing","rematch"].includes(v.status))return;
-if(v.status==="playing"){if(v.state?.winner==null)return;v.status="rematch";v.readyHost=false;v.readyGuest=false;}
-if(host&&v.hostUid===me.uid)v.readyHost=true;else if(!host&&v.guestUid===me.uid)v.readyGuest=true;else return;if(v.guestUid&&v.readyHost&&v.readyGuest){v.status="playing";v.round=(v.round||0)+1;v.state=null;v.guestInput=null;}v.updatedAt=Date.now();return v;},{applyLocally:false});el("online-ready").disabled=true;status("준비 완료! 상대 플레이어를 기다리는 중…");}catch(e){status("시작 준비 실패: "+e.message)}};
+let startPending=false;
+function canStartRound(data){
+ return data?.status==="waiting"||(data?.status==="playing"&&data.state?.winner!=null);
+}
+async function startReadyRound(currentCode,data){
+ if(startPending||!data.guest||!data.readyHost||!data.readyGuest||!canStartRound(data))return;
+ startPending=true;
+ try{
+  await runTransaction(ref(db,ROOT+"/"+currentCode),v=>{
+   if(v?.hostUid!==me.uid||!v.guest||!v.readyHost||!v.readyGuest||!canStartRound(v))return;
+   return {...v,status:"playing",round:(v.round||0)+1,readyHost:false,readyGuest:false,state:null,guestInput:null,updatedAt:Date.now()};
+  },{applyLocally:false});
+ }catch(error){if(code===currentCode)status("대결 시작 실패: "+error.message);}
+ finally{startPending=false;}
+}
+el("online-ready").onclick=async()=>{
+ if(!code||!canStartRound(room))return;
+ try{
+  await set(ref(db,ROOT+"/"+code+"/"+(host?"readyHost":"readyGuest")),true);
+  status("준비 완료! 상대 플레이어를 기다리는 중…");
+ }catch(error){status("시작 준비 실패: "+error.message);}
+};
 function input(){const k=window.fwPvpControls?.keys||new Set();return{dx:Number(k.has("d")||k.has("arrowright"))-Number(k.has("a")||k.has("arrowleft")),dy:Number(k.has("s")||k.has("arrowdown"))-Number(k.has("w")||k.has("arrowup")),fireSeq:window.fwPvpControls?.fireSeq?.()||0,special:!!k.has("e"),at:Date.now()};}
 function guestStart(){sendLoop=setInterval(()=>{if(!code||!room||room.status!=="playing")return;set(ref(db,ROOT+"/"+code+"/guestInput"),input()).catch(e=>status("입력 전송 오류: "+e.message))},100);status("온라인 대전 시작!");}
-function hostStart(){state={players:[{x:110,y:230,hp:loadoutHP(room.hostBuild)||100,fireAt:-10,skillAt:-20,healUsed:false,stun:0,shield:0,slow:0,boost:0,lastFireSeq:0,vx:0,vy:0},{x:690,y:230,hp:loadoutHP(room.guestBuild)||100,fireAt:-10,skillAt:-20,stun:0,shield:0,slow:0,boost:0}],bullets:[],winner:null};stopInput=onValue(ref(db,ROOT+"/"+code+"/guestInput"),s=>{remoteInput=s.val()||{};lastOpponent=Date.now()});let startAt=performance.now(),last=startAt,seq=0;loop=setInterval(async()=>{if(!code||room?.status!=="playing"||ended)return;const now=performance.now(),t=(now-startAt)/1000,dt=clamp((now-last)/1000,0,.1);last=now;if(Date.now()-lastOpponent>18000&&lastOpponent){status("상대의 연결이 끊겼어요. 복귀를 기다리는 중…");return;}step(state,[input(),remoteInput],t,dt,[room.hostBuild,room.guestBuild]);state.seq=++seq;state.sentAt=Date.now();render(state);if(state.winner!==null){ended=true;status(state.winner===0?"🏆 승리!":"상대 승리!");}try{await set(ref(db,ROOT+"/"+code+"/state"),state);}catch(e){status("상태 전송 오류: "+e.message)}},100);status("온라인 대전 시작!");}
+function hostStart(){state={players:[{x:110,y:230,hp:loadoutHP(room.hostBuild)||100,fireAt:-10,skillAt:-20,healUsed:false,stun:0,shield:0,slow:0,boost:0,lastFireSeq:0,vx:0,vy:0},{x:690,y:230,hp:loadoutHP(room.guest?.build)||100,fireAt:-10,skillAt:-20,stun:0,shield:0,slow:0,boost:0}],bullets:[],winner:null};stopInput=onValue(ref(db,ROOT+"/"+code+"/guestInput"),s=>{remoteInput=s.val()||{};lastOpponent=Date.now()});let startAt=performance.now(),last=startAt,seq=0;loop=setInterval(async()=>{if(!code||room?.status!=="playing"||ended)return;const now=performance.now(),t=(now-startAt)/1000,dt=clamp((now-last)/1000,0,.1);last=now;if(Date.now()-lastOpponent>18000&&lastOpponent){status("상대의 연결이 끊겼어요. 복귀를 기다리는 중…");return;}step(state,[input(),remoteInput],t,dt,[room.hostBuild,room.guest?.build]);state.seq=++seq;state.sentAt=Date.now();render(state);if(state.winner!==null){ended=true;status(state.winner===0?"🏆 승리!":"상대 승리!");}try{await set(ref(db,ROOT+"/"+code+"/state"),state);}catch(e){status("상태 전송 오류: "+e.message)}},100);status("온라인 대전 시작!");}
 function step(s,inputs,t,dt,builds){for(let i=0;i<2;i++){let p=s.players[i],v=inputs[i]||{},b=builds[i]||{weapon:"orb",skill:"dream"};if(!weaponOk(b.weapon)||!skillOk(b.skill))continue;const x=clamp(Number(v.dx)||0,-1,1),y=clamp(Number(v.dy)||0,-1,1),d=norm(x,y),target=s.players[1-i];if(t>=p.stun){const speed=220+Math.max(0,Math.min(10,Math.floor(Number(b.speedPoints)||0)))*25;p.vx+=(d.x*speed-(p.vx||0))*Math.min(1,dt*11);p.vy+=(d.y*speed-(p.vy||0))*Math.min(1,dt*11);move(p,p.vx*dt*(t<p.slow?.65:1),p.vy*dt*(t<p.slow?.65:1));}const wc=weaponStats[b.weapon];const seq=Number(v.fireSeq)||0;if(seq>p.lastFireSeq){p.lastFireSeq=seq;if(t-p.fireAt>=wc.delay){p.fireAt=t;const aim=norm(target.x-p.x,target.y-p.y);const damage=wc.damage*(t<p.boost?1.3:1);s.bullets.push({x:p.x,y:p.y,vx:aim.x*wc.speed,vy:aim.y*wc.speed,owner:i,dream:false,slow:b.weapon==="frost",life:2.5,weapon:b.weapon,damage});}}const cd={dream:10,shield:12,dash:6,heal:13,blink:9,boost:12,slow:9,barrier:13}[b.skill];if(v.special&&t-p.skillAt>=cd&&!(b.skill==="heal"&&p.healUsed)){p.skillAt=t;if(b.skill==="heal")p.healUsed=true;if(b.skill==="shield"||b.skill==="barrier")p.shield=t+(b.skill==="barrier"?2.8:2);else if(b.skill==="heal")p.hp=Math.min(loadoutHP(b)||100,p.hp+18);else if(b.skill==="boost")p.boost=t+3;else if(b.skill==="dash"||b.skill==="blink"){const dir=norm(target.x-p.x,target.y-p.y),scale=b.skill==="blink"?165:105;move(p,dir.x*scale,dir.y*scale);}else{const dir=norm(target.x-p.x,target.y-p.y);s.bullets.push({x:p.x,y:p.y,vx:dir.x*340,vy:dir.y*340,owner:i,dream:b.skill==="dream",slow:b.skill==="slow",life:2.5,weapon:b.skill,damage:b.skill==="slow"?3:0});}}}
 for(let b of s.bullets){const ox=b.x,oy=b.y,target=s.players[1-b.owner],nx=ox+b.vx*dt,ny=oy+b.vy*dt;b.life-=dt;const wall=firstWallHit(ox,oy,nx,ny),hit=targetHit(ox,oy,nx,ny,target,b.dream?24:21);if(hit!==null&&(wall===null||hit<wall)){if(t>=target.shield){if(b.dream)target.stun=t+1.2;else {target.hp=Math.max(0,target.hp-(b.damage??12));if(b.slow)target.slow=t+1.5;}}b.life=0;}else if(wall!==null){b.life=0;}b.x=nx;b.y=ny;if(nx<0||nx>800||ny<0||ny>460)b.life=0;}
 s.bullets=s.bullets.filter(b=>b.life>0).slice(-50);if(s.players.some(p=>p.hp<=0)){s.winner=s.players[0].hp<=0?1:0;}}
