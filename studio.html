@@ -81,7 +81,7 @@ function selectMapCell(index){
 }
 function renderMap(){
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-  const cell=mapCells[y*W+x],v=grid[y][x];cell.style.backgroundColor=T[v].c;cell.style.color=v===5?'#101828':'#fff';
+  const cell=mapCells[y*W+x],v=grid[y][x];cell.style.backgroundColor=T[v].c;cell.style.color=v===5?'#101828':'#fff';cell.style.borderColor=v===5?'#000':'#f4f7ff';
   cell.textContent=[3,4,5,6].includes(v)?T[v].e:'';cell.dataset.tileValue=String(v);
   cell.setAttribute('aria-label',(y+1)+'행 '+(x+1)+'열 · '+T[v].n);cell.setAttribute('aria-selected',String(y*W+x===mapCursor));
  }
