@@ -1,6 +1,7 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Formwheel PVP</title><style>body{margin:0;background:#10182b;color:#eaf1ff;font:16px system-ui;padding:15px}main{max-width:920px;margin:auto}a{color:#9ccaff}.card{background:#1a2943;border-radius:16px;padding:15px;margin:12px 0}button,select{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font:inherit;border:1px solid #52658c;border-radius:10px;background:#2d4266;color:white;padding:10px;cursor:pointer}canvas{background:#1d304b;width:100%;touch-action:none;border-radius:12px}.row{display:flex;gap:10px;flex-wrap:wrap}#pad{display:grid;grid-template-columns:repeat(3,60px);gap:4px}#pad button,#fire,#special{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#touch,#pad{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}#touch{display:flex;justify-content:space-between;gap:10px;margin-top:12px}@media (hover:hover) and (pointer:fine){#touch{display:none}}@media (any-pointer:coarse){#touch{display:flex!important}#pad button{min-width:60px;min-height:54px}}label{display:grid;gap:5px}p{line-height:1.55} #pad{display:block;flex:0 0 auto}#joystick{position:relative;width:clamp(90px,28vw,136px);aspect-ratio:1;border:2px solid #8299bc;border-radius:50%;background:#243b60;touch-action:none;box-sizing:border-box}#joystick-knob{position:absolute;left:50%;top:50%;width:44%;aspect-ratio:1;border-radius:50%;background:#9ccaff;border:2px solid #dbeafe;box-sizing:border-box;transform:translate(-50%,-50%);pointer-events:none}#touch>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}#fire,#special{min-height:52px} #special.skill-unavailable{background:#68717e;opacity:.48;filter:grayscale(1)}#special{min-width:105px}
 #arena-view-back,
-#arena-view-expand { display: none; }
+#arena-view-expand,
+#arena-overview { display: none; }
 
 @media (any-pointer: coarse) {
   body {
@@ -15,30 +16,43 @@
     border-radius: 0;
   }
 
+  body.arena-expanded {
+    overflow: hidden;
+  }
+
+  .arena-expanded #battle-card {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+    background: #10182b;
+    z-index: 9000;
+    touch-action: none;
+  }
+
+  .arena-expanded #battle-card > :not(#arena, #touch, #battle-hp, #arena-view-back, #arena-overview),
+  .arena-expanded #secol-share-link {
+    display: none;
+  }
+
+  .arena-expanded #arena-view-back {
+    display: block;
+    min-height: 44px;
+    background: #10182be6;
+    font-size: 13px;
+  }
+
+  #arena-view-expand:not([hidden]) {
+    display: block;
+    margin: 8px auto 0;
+  }
+
   @media (orientation: landscape) {
-    body.arena-expanded {
-      overflow: hidden;
-    }
-
-    .arena-expanded #battle-card {
-      position: fixed;
-      inset: 0 0 auto;
-      height: 100vh;
-      height: 100dvh;
-      margin: 0;
-      padding: 0;
-      border-radius: 0;
-      overflow: hidden;
-      background: #10182b;
-      z-index: 9000;
-      touch-action: none;
-    }
-
-    .arena-expanded #battle-card > :not(#arena, #touch, #battle-hp, #arena-view-back),
-    .arena-expanded #secol-share-link {
-      display: none;
-    }
-
     .arena-expanded #arena {
       box-sizing: border-box;
       width: 100%;
@@ -63,18 +77,9 @@
     }
 
     .arena-expanded #arena-view-back {
-      display: block;
       position: absolute;
       top: max(8px, env(safe-area-inset-top));
       right: max(8px, env(safe-area-inset-right));
-      min-height: 44px;
-      background: #10182be6;
-      font-size: 13px;
-    }
-
-    #arena-view-expand:not([hidden]) {
-      display: block;
-      margin: 8px auto 0;
     }
 
     .arena-expanded #touch {
@@ -108,14 +113,66 @@
       background: #68717e;
     }
   }
+  @media (orientation: portrait) {
+    .arena-expanded #battle-card {
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 8px;
+      padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+        max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    }
+
+    .arena-expanded #battle-hp {
+      grid-area: 1 / 1;
+      margin: 0;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .arena-expanded #arena-overview {
+      grid-area: 1 / 2;
+      display: block;
+      width: clamp(84px, 26vw, 132px);
+      border: 1px solid #48638a;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .arena-expanded #arena-view-back {
+      grid-area: 1 / 3;
+    }
+
+    .arena-expanded #arena {
+      grid-area: 2 / 1 / 3 / -1;
+      width: 100%;
+      height: min(100%, 132vw);
+      margin: 0;
+      object-fit: var(--arena-camera-fit, contain);
+      object-position: var(--arena-camera-x, 50%) center;
+      background: transparent;
+    }
+
+    .arena-expanded #touch {
+      grid-area: 3 / 1 / 4 / -1;
+      align-items: center;
+      margin: 0;
+    }
+
+    .arena-expanded #joystick {
+      width: clamp(76px, 23vw, 115px);
+    }
+  }
 }
 </style><meta name="description" content="친구와 경쟁하는 Formwheel PVP.">
 <link rel="canonical" href="https://semicolonxss.github.io/Formwheel_PVP/">
 <meta property="og:description" content="친구와 경쟁하는 Formwheel PVP.">
 <meta name="twitter:card" content="summary_large_image">
 <script type="module" src="https://semicolonxss.github.io/Formwheel/shared/direct-visitor.js?v=20261028"></script>
-<style id="pvp-polish">body{background:radial-gradient(ellipse at top,#22375c,#0b1222 65%);padding:clamp(10px,2.5vw,24px)}.card{background:linear-gradient(145deg,#20324f,#142239);border:1px solid #344b70;box-shadow:0 8px 24px #0003}h1{letter-spacing:-.035em}button,select,input{max-width:100%;box-sizing:border-box}button:focus-visible,select:focus-visible{outline:3px solid #80e6d5;outline-offset:3px}button:not(:disabled):active{transform:translateY(1px)}button:disabled{opacity:.55;cursor:not-allowed}#arena{display:block;box-shadow:0 0 0 1px #58759a,0 8px 24px #0005}#status{font-weight:800;color:#a9dfff}#joystick{background:radial-gradient(circle,#355478,#192b46);box-shadow:inset 0 0 0 8px #ffffff09}#joystick-knob{background:linear-gradient(145deg,#d5edff,#6196d3);box-shadow:0 3px 9px #0005}#fire{background:#285d88}#special:not(.skill-unavailable){background:#58458b}#build-preview{font-size:14px;color:#b8d9ff;background:#0e1c31;padding:12px;border-radius:10px} @media(max-width:560px){.card{padding:12px}.card>.row>label{flex:1 1 135px;min-width:0}.card>.row>label select{width:100%;font-size:14px}#touch{align-items:center}#touch>div:last-child{flex:1}#fire,#special{min-width:76px;padding:9px}#secol-share-link{bottom:max(8px,env(safe-area-inset-bottom))}} @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}</style></head><body><main><a href="../Formwheel/">← Formwheel Hub</a><h1>⚔️ Formwheel PVP</h1><nav class="row"><button id="play-view" type="button">🎮 플레이</button><a id="creator-link" style="display:inline-block;padding:10px 18px;background:#36547c;border-radius:10px;color:white;text-decoration:none" href="./studio.html">🛠️ 제작 (맵·무기·특수 능력)</a></nav><p>무기를 선택하고 특수 능력으로 5개 기본 맵과 10단계 AI를 선택하거나 친구와 대결! <b>온라인 1대1 베타</b></p><section class="card"><div class="row"><label>무기<select id="weapon"><option value="orb">🔵 에너지 오브 (원거리)</option><option value="wave">🌀 펄스 (근거리)</option><option value="spark">⚡ 스파크 (연사)</option><option value="cannon">💥 캐논 (강한 한 방)</option><option value="swift">🏹 스위프트 (고속)</option><option value="frost">❄️ 프로스트 (둔화)</option><option value="burst">🌟 버스트 (균형)</option><option value="arc">🔷 아크 (원거리)</option><option value="heavy">🪨 헤비 (중량)</option><option value="needle">🪡 니들 (속사)</option></select></label><label>특수 능력<select id="skill"><option value="dream">💤 드림볼 · 4P</option><option value="shield">🛡️ 보호막 · 4P</option><option value="dash">💨 대시 · 3P</option><option value="heal">💚 회복 · 4P</option><option value="blink">✨ 블링크 · 4P</option><option value="boost">🔥 강화 · 4P</option><option value="slow">🧊 둔화탄 · 3P</option><option value="barrier">💠 장벽 · 4P</option></select></label><label>맵<select id="map"><option value="classic">🏟️ 클래식</option><option value="twin">🏛️ 쌍둥이 기둥</option><option value="maze">🧩 미로</option><option value="open" selected>🌌 오픈 필드</option><option value="cross">✚ 십자로</option></select></label><label>게임 모드<select id="battle-mode"><option value="duel">1대1 대결</option><option value="raid">솔로 RAID (AI 3명 + 버프 아이템)</option><option value="double">DOUBLE RAID (보스 2명)</option><option value="workshop">BOSS WORKSHOP (비공식)</option></select></label><label>레이드 보스<select id="raid-boss"><option value="titan">TITAN</option><option value="phantom">PHANTOM</option><option value="chaos">CHAOS</option><option value="overlord">OVERLORD</option><option value="omega">OMEGA</option><option value="summoner">SUMMONER</option><option value="prism">PRISM</option></select></label><label>두 번째 보스 (DOUBLE 전용)<select id="raid-boss2"><option value="titan">TITAN</option><option value="phantom" selected>PHANTOM</option><option value="chaos">CHAOS</option><option value="overlord">OVERLORD</option><option value="omega">OMEGA</option><option value="summoner">SUMMONER</option><option value="prism">PRISM</option></select></label><label>AI 성격<select id="ai-style"><option value="balanced">균형형 (중립)</option><option value="attack">공격형</option><option value="defense">방어형</option><option value="evade">회피형</option><option value="chaos">변칙형</option><option value="random">랜덤</option></select></label><label>AI 난이도<select id="difficulty"><option value="1">1 · 연습</option><option value="2">2 · 쉬움</option><option value="3" selected>3 · 보통</option><option value="4">4 · 어려움</option><option value="5">5 · 숙련</option><option value="6">6 · 고급</option><option value="7">7 · 어려움</option><option value="8">8 · 전문가</option><option value="9">9 · 최상급</option><option value="10">10 · 최강</option></select></label></div><p>⚖️ 총 10P · 무기와 스킬을 선택하고 남는 1P당 최대 체력 +15</p><label style="max-width:320px">⚡ 속도 투자 <select id="speed-points"></select></label><p id="build-preview" role="status"></p><fieldset id="boss-workshop" hidden><legend>BOSS WORKSHOP · 비공식</legend><label>HP <input id="bw-hp" type="number" min="500" max="10000" step="500" value="3000"></label><div class="row"><label><input type="checkbox" id="bw-0" checked>레이저</label><label><input type="checkbox" id="bw-1" checked>AI 소환</label><label><input type="checkbox" id="bw-2" >순간이동</label><label><input type="checkbox" id="bw-3" >보호막</label></div><label>조합 코드 <input id="bw-code" maxlength="16"></label><button type="button" id="bw-load">코드 적용</button><button type="button" id="bw-copy">코드 복사</button><p id="bw-status"></p></fieldset></section><section class="card"><strong>🌐 온라인 1대1 · 친구 대전</strong><p>한 사람이 방을 만들고 6자리 코드를 친구에게 알려주세요. 로그인되어 있지 않으면 게스트 인증을 시도해요.</p><div class="row"><button id="online-create">🎮 방 만들기</button><input id="join-code" maxlength="6" placeholder="방 코드 6자리" aria-label="온라인 방 코드" style="padding:10px;border-radius:10px;max-width:155px;text-transform:uppercase"><button id="online-join">방 참가</button><button id="online-copy">코드 복사</button><button id="online-ready" hidden>▶ 온라인 시작</button><button id="online-exit" hidden>나가기</button></div><p>내 방 코드: <strong id="online-code">—</strong></p><p id="online-status" role="status" aria-live="polite">온라인 대전을 시작할 수 있어요.</p></section><section class="card" id="battle-card"><p id="status" role="status">경기 시작을 눌러 주세요.</p><p id="battle-hp">🔵 플레이어 <strong id="hp">100</strong> HP · 🔴 <span id="online-opponent">AI</span> <strong id="aihp">100</strong> HP</p><canvas id="arena" width="800" height="460"></canvas><button id="arena-view-back" type="button">기본 화면</button><div style="text-align:center;margin-top:12px"><button id="arena-start" type="button" style="width:min(100%,350px);background:#4b51bb;font-weight:800;padding:14px 20px">▶ 경기 시작하기</button><button id="arena-view-expand" type="button" hidden>전체화면</button></div><div id="touch"><div id="pad"><div id="joystick" role="group" aria-label="이동 조이스틱"><div id="joystick-knob"></div></div></div><div><button id="fire">🎯 공격</button><button id="special">✨ 특수</button></div></div><p>PC: WASD/방향키 이동 · 자동 조준 · 클릭/Space 한 번에 한 발 · E 특수. 모바일: 조이스틱으로 이동하고 버튼으로 공격. 전투 중 가로로 돌리면 전체화면.</p></section><section class="card"><strong>밸런스</strong><p>HP 100 · 무기별 공격 간격·위력이 다름 · 드림볼: 1.2초 이동 제한, 재사용 10초 · 보호막: 2초, 재사용 12초 · 대시: 재사용 6초. 수면은 현실 약물이 아닌 게임 속 마법 상태이상입니다.</p><p>온라인 대전은 Firebase 방 코드 방식의 테스트 버전입니다. 안정적인 랭킹과 무기 공유는 향후 개발 예정이에요.</p></section></main><script>
-const c=document.querySelector("canvas"),g=c.getContext("2d"),get=id=>document.getElementById(id),keys=new Set(),aim={x:680,y:230};let p,a,balls=[],playing=false,armed=false,prev=0,held=false,fireSeq=0,skill="dream",w="orb";const weaponStats={orb:{delay:.72,damage:8,speed:395},wave:{delay:.85,damage:12,speed:290},spark:{delay:.38,damage:4,speed:400},cannon:{delay:1.45,damage:19,speed:290},swift:{delay:.75,damage:7,speed:540},frost:{delay:.95,damage:6,speed:350},burst:{delay:.62,damage:7,speed:380},arc:{delay:1.08,damage:11,speed:520},heavy:{delay:1.65,damage:21,speed:255},needle:{delay:.3,damage:3,speed:500}};
+<style id="pvp-polish">body{background:radial-gradient(ellipse at top,#22375c,#0b1222 65%);padding:clamp(10px,2.5vw,24px)}.card{background:linear-gradient(145deg,#20324f,#142239);border:1px solid #344b70;box-shadow:0 8px 24px #0003}h1{letter-spacing:-.035em}button,select,input{max-width:100%;box-sizing:border-box}button:focus-visible,select:focus-visible{outline:3px solid #80e6d5;outline-offset:3px}button:not(:disabled):active{transform:translateY(1px)}button:disabled{opacity:.55;cursor:not-allowed}#arena{display:block;box-shadow:0 0 0 1px #58759a,0 8px 24px #0005}#status{font-weight:800;color:#a9dfff}#joystick{background:radial-gradient(circle,#355478,#192b46);box-shadow:inset 0 0 0 8px #ffffff09}#joystick-knob{background:linear-gradient(145deg,#d5edff,#6196d3);box-shadow:0 3px 9px #0005}#fire{background:#285d88}#special:not(.skill-unavailable){background:#58458b}#build-preview{font-size:14px;color:#b8d9ff;background:#0e1c31;padding:12px;border-radius:10px} @media(max-width:560px){.card{padding:12px}.card>.row>label{flex:1 1 135px;min-width:0}.card>.row>label select{width:100%;font-size:14px}#touch{align-items:center}#touch>div:last-child{flex:1}#fire,#special{min-width:76px;padding:9px}#secol-share-link{bottom:max(8px,env(safe-area-inset-bottom))}} @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}</style></head><body><main><a href="../Formwheel/">← Formwheel Hub</a><h1>⚔️ Formwheel PVP</h1><nav class="row"><button id="play-view" type="button">🎮 플레이</button><a id="creator-link" style="display:inline-block;padding:10px 18px;background:#36547c;border-radius:10px;color:white;text-decoration:none" href="./studio.html">🛠️ 제작 (맵·무기·특수 능력)</a></nav><p>무기를 선택하고 특수 능력으로 5개 기본 맵과 10단계 AI를 선택하거나 친구와 대결! <b>온라인 1대1 베타</b></p><section class="card"><div class="row"><label>무기<select id="weapon"><option value="orb">🔵 에너지 오브 (원거리)</option><option value="wave">🌀 펄스 (근거리)</option><option value="spark">⚡ 스파크 (연사)</option><option value="cannon">💥 캐논 (강한 한 방)</option><option value="swift">🏹 스위프트 (고속)</option><option value="frost">❄️ 프로스트 (둔화)</option><option value="burst">🌟 버스트 (균형)</option><option value="arc">🔷 아크 (원거리)</option><option value="heavy">🪨 헤비 (중량)</option><option value="needle">🪡 니들 (속사)</option></select></label><label>특수 능력<select id="skill"><option value="dream">💤 드림볼 · 4P</option><option value="shield">🛡️ 보호막 · 4P</option><option value="dash">💨 대시 · 3P</option><option value="heal">💚 회복 · 4P</option><option value="blink">✨ 블링크 · 4P</option><option value="boost">🔥 강화 · 4P</option><option value="slow">🧊 둔화탄 · 3P</option><option value="barrier">💠 장벽 · 4P</option></select></label><label>맵<select id="map"><option value="classic">🏟️ 클래식</option><option value="twin">🏛️ 쌍둥이 기둥</option><option value="maze">🧩 미로</option><option value="open" selected>🌌 오픈 필드</option><option value="cross">✚ 십자로</option></select></label><label>게임 모드<select id="battle-mode"><option value="duel">1대1 대결</option><option value="raid">솔로 RAID (AI 3명 + 버프 아이템)</option><option value="double">DOUBLE RAID (보스 2명)</option><option value="workshop">BOSS WORKSHOP (비공식)</option></select></label><label>레이드 보스<select id="raid-boss"><option value="titan">TITAN</option><option value="phantom">PHANTOM</option><option value="chaos">CHAOS</option><option value="overlord">OVERLORD</option><option value="omega">OMEGA</option><option value="summoner">SUMMONER</option><option value="prism">PRISM</option></select></label><label>두 번째 보스 (DOUBLE 전용)<select id="raid-boss2"><option value="titan">TITAN</option><option value="phantom" selected>PHANTOM</option><option value="chaos">CHAOS</option><option value="overlord">OVERLORD</option><option value="omega">OMEGA</option><option value="summoner">SUMMONER</option><option value="prism">PRISM</option></select></label><label>AI 성격<select id="ai-style"><option value="balanced">균형형 (중립)</option><option value="attack">공격형</option><option value="defense">방어형</option><option value="evade">회피형</option><option value="chaos">변칙형</option><option value="random">랜덤</option></select></label><label>AI 난이도<select id="difficulty"><option value="1">1 · 연습</option><option value="2">2 · 쉬움</option><option value="3" selected>3 · 보통</option><option value="4">4 · 어려움</option><option value="5">5 · 숙련</option><option value="6">6 · 고급</option><option value="7">7 · 어려움</option><option value="8">8 · 전문가</option><option value="9">9 · 최상급</option><option value="10">10 · 최강</option></select></label></div><p>⚖️ 총 10P · 무기와 스킬을 선택하고 남는 1P당 최대 체력 +15</p><label style="max-width:320px">⚡ 속도 투자 <select id="speed-points"></select></label><p id="build-preview" role="status"></p><fieldset id="boss-workshop" hidden><legend>BOSS WORKSHOP · 비공식</legend><label>HP <input id="bw-hp" type="number" min="500" max="10000" step="500" value="3000"></label><div class="row"><label><input type="checkbox" id="bw-0" checked>레이저</label><label><input type="checkbox" id="bw-1" checked>AI 소환</label><label><input type="checkbox" id="bw-2" >순간이동</label><label><input type="checkbox" id="bw-3" >보호막</label></div><label>조합 코드 <input id="bw-code" maxlength="16"></label><button type="button" id="bw-load">코드 적용</button><button type="button" id="bw-copy">코드 복사</button><p id="bw-status"></p></fieldset></section><section class="card"><strong>🌐 온라인 1대1 · 친구 대전</strong><p>한 사람이 방을 만들고 6자리 코드를 친구에게 알려주세요. 로그인되어 있지 않으면 게스트 인증을 시도해요.</p><div class="row"><button id="online-create">🎮 방 만들기</button><input id="join-code" maxlength="6" placeholder="방 코드 6자리" aria-label="온라인 방 코드" style="padding:10px;border-radius:10px;max-width:155px;text-transform:uppercase"><button id="online-join">방 참가</button><button id="online-copy">코드 복사</button><button id="online-ready" hidden>▶ 온라인 시작</button><button id="online-exit" hidden>나가기</button></div><p>내 방 코드: <strong id="online-code">—</strong></p><p id="online-status" role="status" aria-live="polite">온라인 대전을 시작할 수 있어요.</p></section><section class="card" id="battle-card"><p id="status" role="status">경기 시작을 눌러 주세요.</p><p id="battle-hp">🔵 플레이어 <strong id="hp">100</strong> HP · 🔴 <span id="online-opponent">AI</span> <strong id="aihp">100</strong> HP</p><canvas id="arena" width="800" height="460"></canvas><canvas id="arena-overview" width="160" height="92" role="img" aria-label="전체 경기장 미니맵"></canvas><button id="arena-view-back" type="button">기본 화면</button><div style="text-align:center;margin-top:12px"><button id="arena-start" type="button" style="width:min(100%,350px);background:#4b51bb;font-weight:800;padding:14px 20px">▶ 경기 시작하기</button><button id="arena-view-expand" type="button" hidden>전체화면</button></div><div id="touch"><div id="pad"><div id="joystick" role="group" aria-label="이동 조이스틱"><div id="joystick-knob"></div></div></div><div><button id="fire">🎯 공격</button><button id="special">✨ 특수</button></div></div><p>PC: WASD/방향키 이동 · 자동 조준 · 클릭/Space 한 번에 한 발 · E 특수. 모바일: 조이스틱으로 이동하고 버튼으로 공격. 세로에서는 내 캐릭터를 따라가며, 위 미니맵에 전체 경기장이 보여요.</p></section><section class="card"><strong>밸런스</strong><p>HP 100 · 무기별 공격 간격·위력이 다름 · 드림볼: 1.2초 이동 제한, 재사용 10초 · 보호막: 2초, 재사용 12초 · 대시: 재사용 6초. 수면은 현실 약물이 아닌 게임 속 마법 상태이상입니다.</p><p>온라인 대전은 Firebase 방 코드 방식의 테스트 버전입니다. 안정적인 랭킹과 무기 공유는 향후 개발 예정이에요.</p></section></main><script>
+const c=document.getElementById("arena"),g=c.getContext("2d"),get=id=>document.getElementById(id),keys=new Set(),aim={x:680,y:230};let p,a,balls=[],playing=false,armed=false,prev=0,held=false,fireSeq=0,skill="dream",w="orb";const weaponStats={orb:{delay:.72,damage:8,speed:395},wave:{delay:.85,damage:12,speed:290},spark:{delay:.38,damage:4,speed:400},cannon:{delay:1.45,damage:19,speed:290},swift:{delay:.75,damage:7,speed:540},frost:{delay:.95,damage:6,speed:350},burst:{delay:.62,damage:7,speed:380},arc:{delay:1.08,damage:11,speed:520},heavy:{delay:1.65,damage:21,speed:255},needle:{delay:.3,damage:3,speed:500}};
 const maps={classic:[[377,158,46,144]],twin:[[275,85,42,130],[483,245,42,130]],maze:[[245,65,35,145],[520,250,35,145],[382,165,36,130]],open:[],cross:[[385,65,30,118],[385,277,30,118],[245,215,115,30],[440,215,115,30]]};let raid=null;const raidBosses={titan:[173,85,12],phantom:[200,150,13],chaos:[240,110,16],overlord:[293,120,19],omega:[373,145,22],summoner:[280,95,10],prism:[290,85,11]};let selectedMap="open",aiLevel=3,aiStyle="balanced";const aiStyles={balanced:{range:180,orbit:1,rate:1},attack:{range:95,orbit:.65,rate:.75},defense:{range:300,orbit:.8,rate:1.25},evade:{range:235,orbit:1.8,rate:1.15},chaos:{range:180,orbit:1.4,rate:.9}};const customStoreKey="formwheel-pvp-studio-v1";let customMaps=[],customWeapons=[];function syncCustom(){try{const db=JSON.parse(localStorage.getItem(customStoreKey)||"{}");customMaps=(db.maps||[]).filter(m=>m&&Array.isArray(m.grid)&&m.grid.length===18&&m.grid.every(r=>Array.isArray(r)&&r.length===28)&&m.grid.flat().every(v=>Number.isInteger(v)&&v>=0&&v<=6));customWeapons=(db.weapons||[]).filter(w=>w&&w.damage>=3&&w.damage<=50&&w.range>=1&&w.range<=12&&w.rate>=200&&w.rate<=1300&&w.speed>=3&&w.speed<=14&&Math.round(w.damage*.85+w.range*2.5+(1300-w.rate)/30+(w.speed-3)*1.6+(w.type==="melee"?5:10))<=85)}catch(e){customMaps=[];customWeapons=[]}for(const [id,items] of [["map",customMaps],["weapon",customWeapons]]){const sel=get(id),selected=sel.value;[...sel.options].filter(o=>o.value.startsWith("custom:")).forEach(o=>o.remove());for(const entry of items)sel.add(new Option("🛠️ "+entry.name,"custom:"+entry.id));if([...sel.options].some(o=>o.value===selected))sel.value=selected}for(const m of customMaps){const walls=[];for(let y=0;y<18;y++)for(let x=0;x<28;x++)if([1,2,6].includes(m.grid[y][x]))walls.push([x*800/28,y*460/18,800/28,460/18,m.grid[y][x]]);maps["custom:"+m.id]=walls}for(const w of customWeapons){weaponStats["custom:"+w.id]={delay:w.rate/1000,damage:w.damage,speed:w.speed*44,range:w.range*800/28*1.55,type:w.type};weaponPoints["custom:"+w.id]=3;weaponNames["custom:"+w.id]=w.name}}function importSharedMap(){const url=new URL(location.href),payload=url.searchParams.get("importMap");if(!payload)return;try{if(payload.length>5000)throw Error("크기가 너무 큽니다");const item=JSON.parse(payload);if(!item||typeof item.id!=="string"||typeof item.name!=="string"||!Array.isArray(item.grid)||item.grid.length!==18||!item.grid.every(row=>Array.isArray(row)&&row.length===28&&row.every(v=>Number.isInteger(v)&&v>=0&&v<=6)))throw Error("올바르지 않은 맵");const stored=JSON.parse(localStorage.getItem(customStoreKey)||"{}");stored.maps=Array.isArray(stored.maps)?stored.maps:[];if(!stored.maps.some(m=>m.id===item.id))stored.maps.push(item);localStorage.setItem(customStoreKey,JSON.stringify(stored));syncCustom();get("map").value="custom:"+item.id;updateLoadout();get("status").textContent="✓ 커스텀 맵 '"+item.name.slice(0,32)+"'을(를) 불러왔어요.";url.searchParams.delete("importMap");history.replaceState(null,"",url.pathname+url.search+url.hash);}catch(e){get("status").textContent="맵 가져오기 실패: "+e.message;}}
 const walls=()=>maps[selectedMap]||maps.classic;
 function blocked(x,y,r=16){return walls().some(([bx,by,bw,bh])=>x+r>bx&&x-r<bx+bw&&y+r>by&&y-r<by+bh)}
@@ -159,18 +216,73 @@ stick.addEventListener("pointerdown",e=>{if(stickPointer!==null)return;e.prevent
 stick.addEventListener("pointermove",e=>{if(e.pointerId===stickPointer)updateStick(e);});
 for(const ev of ["pointerup","pointercancel","lostpointercapture"])stick.addEventListener(ev,e=>{if(e.pointerId===stickPointer)resetStick();});
 window.addEventListener("blur",resetStick);document.addEventListener("visibilitychange",()=>{if(document.hidden)resetStick();});
-const landscapeTouch = matchMedia("(orientation: landscape) and (any-pointer: coarse)");
-const portraitTouch = matchMedia("(orientation: portrait) and (any-pointer: coarse)");
+const touchScreen = matchMedia("(any-pointer: coarse)");
+const portrait = matchMedia("(orientation: portrait)");
 const expandArena = get("arena-view-expand");
+const arenaOverview = get("arena-overview");
+const overviewContext = arenaOverview.getContext("2d");
+const arenaCamera = {left: 0, width: c.width};
 let arenaMatchActive = false;
 let arenaViewDismissed = false;
+let portraitFocus = false;
+let portraitViewWidth = c.width;
+let lastOverviewPaint = -Infinity;
+
+function measurePortraitArena() {
+  if (!portraitFocus || !c.clientHeight) return;
+  portraitViewWidth = Math.min(c.width, c.clientWidth * c.height / c.clientHeight);
+  const fit = portraitViewWidth < c.width ? "cover" : "contain";
+  c.style.setProperty("--arena-camera-fit", fit);
+}
+new ResizeObserver(measurePortraitArena).observe(c);
+
+function followArenaPlayer(playerX) {
+  const width = portraitFocus ? portraitViewWidth : c.width;
+  const maxLeft = c.width - width;
+  const left = clamp(playerX - width / 2, 0, maxLeft);
+  arenaCamera.left = left;
+  arenaCamera.width = width;
+  if (portraitFocus) {
+    const position = maxLeft > 0 ? (left / maxLeft * 100).toFixed(2) + "%" : "50%";
+    if (c.style.getPropertyValue("--arena-camera-x") !== position) {
+      c.style.setProperty("--arena-camera-x", position);
+    }
+  }
+}
+
+function paintArenaOverview(now) {
+  if (!portraitFocus || now - lastOverviewPaint < 50) return;
+  lastOverviewPaint = now;
+  const {width, height} = arenaOverview;
+  const scale = width / c.width;
+  overviewContext.clearRect(0, 0, width, height);
+  overviewContext.drawImage(c, 0, 0, width, height);
+  overviewContext.strokeStyle = "#dbeafe";
+  overviewContext.strokeRect(arenaCamera.left * scale + .5, .5,
+    arenaCamera.width * scale - 1, height - 1);
+}
+window.fwPvpUpdateArenaCamera = playerX => {
+  if (!portraitFocus) return;
+  followArenaPlayer(playerX);
+  paintArenaOverview(performance.now());
+};
 
 function syncArenaView() {
-  const expanded = arenaMatchActive && landscapeTouch.matches && !arenaViewDismissed;
+  const expanded = arenaMatchActive && touchScreen.matches && !arenaViewDismissed;
   const wasExpanded = document.body.classList.contains("arena-expanded");
+  const wasPortraitFocus = portraitFocus;
+  portraitFocus = expanded && portrait.matches;
   document.body.classList.toggle("arena-expanded", expanded);
-  expandArena.hidden = !(arenaMatchActive && landscapeTouch.matches && arenaViewDismissed);
-  if (expanded !== wasExpanded) resetStick();
+  expandArena.hidden = !(arenaMatchActive && touchScreen.matches && arenaViewDismissed);
+
+  if (expanded !== wasExpanded || portraitFocus !== wasPortraitFocus) {
+    resetStick();
+    lastOverviewPaint = -Infinity;
+    if (portraitFocus) {
+      overviewContext.clearRect(0, 0, arenaOverview.width, arenaOverview.height);
+      measurePortraitArena();
+    }
+  }
 }
 
 function setArenaMatchActive(active) {
@@ -179,18 +291,18 @@ function setArenaMatchActive(active) {
   arenaMatchActive = active;
   arenaViewDismissed = false;
   syncArenaView();
-  if (active && portraitTouch.matches) c.scrollIntoView({block: "start"});
-  if (!active && (wasExpanded || portraitTouch.matches)) {
+  if (!active && wasExpanded) {
     get(window.fwPvpOnlineActive ? "online-status" : "status").scrollIntoView({block: "center"});
   }
 }
 window.fwPvpSetArenaMatchActive = setArenaMatchActive;
 
-landscapeTouch.addEventListener("change", () => {
+function resetArenaViewDismissal() {
   arenaViewDismissed = false;
   syncArenaView();
-  if (arenaMatchActive && portraitTouch.matches) c.scrollIntoView({block: "start"});
-});
+}
+portrait.addEventListener("change", resetArenaViewDismissal);
+touchScreen.addEventListener("change", resetArenaViewDismissal);
 get("arena-view-back").addEventListener("click", () => {
   arenaViewDismissed = true;
   syncArenaView();
@@ -266,18 +378,26 @@ if(playing&&raid){updateRaid(t,dt);}else if(playing){let v=movement();
 if(t>p.stun){p.vx+=(v.x*p.moveSpeed-p.vx)*Math.min(1,dt*11);p.vy+=(v.y*p.moveSpeed-p.vy)*Math.min(1,dt*11);move(p,p.vx*dt*(t<p.slow?.65:1),p.vy*dt*(t<p.slow?.65:1));}
 if(t>a.stun){let d=norm(p.x-a.x,p.y-a.y),range=distance(p,a),sign=range>220?1:range<140?-1:0;const speeds=Array.from({length:11},(_,i)=>i===0?0:55+i*21),shots=Array.from({length:11},(_,i)=>Math.max(.2,2-i*.17));const wallBetween=firstWallHit(a.x,a.y,p.x,p.y)!==null;const path=wallBetween?norm(p.x-a.x,p.y-a.y+(a.y<230?-200:200)):d;const orbit=Math.sin(t*(.8+aiLevel*.13))>=0?1:-1;const profile=aiStyles[aiStyle],preferred=aiStyle==="chaos"?180+100*Math.sin(t*.9):profile.range;const radial=wallBetween?1:Math.max(-1,Math.min(1,(range-preferred)/65));const lateral=wallBetween?0:(.45+aiLevel*.055)*orbit*profile.orbit;const desired=norm(path.x*radial-path.y*lateral,path.y*radial+path.x*lateral);const pace=speeds[aiLevel]*(t<a.slow?.65:1);a.vx+=(desired.x*pace-a.vx)*Math.min(1,dt*8);a.vy+=(desired.y*pace-a.vy)*Math.min(1,dt*8);move(a,a.vx*dt,a.vy*dt);if(range<710&&!wallBetween&&t-a.shot>=Math.max(.2,shots[aiLevel]*aiStyles[aiStyle].rate)){shoot(a,p,t);}}
 for(let b of balls){const ox=b.x,oy=b.y,target=b.owner===p?a:p;const nx=ox+b.vx*dt,ny=oy+b.vy*dt;b.life-=dt;const wall=firstWallHit(ox,oy,nx,ny),hit=targetHit(ox,oy,nx,ny,target,b.dream?20:15);if(hit!==null&&(wall===null||hit<wall)){if(t>=target.shield){if(b.dream)target.stun=t+1.2;else {target.hp-=b.damage;if(b.slow)target.slow=t+1.5;}}b.life=0;}else if(wall!==null){b.life=0;}b.x=nx;b.y=ny;if(nx<0||nx>800||ny<0||ny>460)b.life=0;}balls=balls.filter(b=>b.life>0);const hpText=String(Math.max(0,Math.ceil(p.hp))),aiText=String(Math.max(0,Math.ceil(a.hp)));if(get("hp").textContent!==hpText)get("hp").textContent=hpText;if(get("aihp").textContent!==aiText)get("aihp").textContent=aiText;if(p.hp<=0||a.hp<=0){playing=false;setArenaMatchActive(false);get("status").textContent=a.hp<=0?"🏆 승리!":"AI 승리! 재도전해 봐!";get("arena-start").disabled=false;keys.clear();get("arena-start").textContent="↻ 다시 시작하기";}}
+const followedPlayer = portraitFocus && raid && p?.hp <= 0
+  ? raid.team.find(member => member.hp > 0) || p : p;
+followArenaPlayer(followedPlayer?.x ?? c.width / 2);
+const arenaCenter = arenaCamera.left + arenaCamera.width / 2;
+const raidBossSlot = arenaCamera.width / (raid?.bosses.length || 1);
+const raidBossLabelX = (index, landscapeCenter) => portraitFocus
+  ? arenaCamera.left + raidBossSlot * (index + .5) : landscapeCenter;
 function actor(o,color,label){if(!o)return;o.trail??=[];if(Math.hypot(o.vx||0,o.vy||0)>12)o.trail.push({x:o.x,y:o.y,life:.28});for(const q of o.trail){q.life-=dt;g.globalAlpha=Math.max(0,q.life/.28)*.2;g.fillStyle=color;g.beginPath();g.arc(q.x,q.y,10,0,7);g.fill();}g.globalAlpha=1;o.trail=o.trail.filter(q=>q.life>0).slice(-7);g.save();g.translate(o.x,o.y);g.rotate(Math.atan2(o.vy||0,o.vx||0)*.09);g.fillStyle=color;g.beginPath();g.arc(0,0,10,0,7);g.fill();g.strokeStyle="#e2eaff";g.lineWidth=3;g.stroke();if(o.shield>t){g.strokeStyle="#70e8ce";g.beginPath();g.arc(0,0,17,0,Math.PI*2);g.stroke()}if(o.stun>t){g.fillStyle="#d1acff";g.font="22px sans-serif";g.fillText("✦",-6,-26);}g.fillStyle="#fff";g.font="12px sans-serif";g.textAlign="center";g.fillText(label,0,4);g.restore();const max=o.maxHp||100,ratio=Math.max(0,Math.min(1,o.hp/max));g.fillStyle="#091423";g.fillRect(o.x-19,o.y-25,38,5);g.fillStyle=color;g.fillRect(o.x-19,o.y-25,38*ratio,5);}
-if(raid){raid.team.forEach((o,i)=>{if(o.hp>0)actor(o,i===0?"#278bd5":"#40b99d",i===0?"P1":["","ATK","DEF","SUP"][i]);else if(playing){g.save();g.globalAlpha=.45;actor(o,"#888",""+(i?"B"+i:"P1"));g.restore();g.fillStyle="#fff";g.font="bold 16px system-ui";g.textAlign="center";g.fillText(Math.ceil(Math.max(0,o.reviveAt-raid.clock))+"초",o.x,o.y-36);}});(raid.minions||[]).forEach(o=>{if(playing&&o.hp>0&&o.summoner.hp>0)actor(o,"#f99878","AI");});raid.bosses.forEach((boss,i)=>{if(boss.hp>0)actor(boss,"#df6e79",boss.name.toUpperCase());const width=raid.bosses.length===2?330:560,x=raid.bosses.length===2?50+i*370:120;g.fillStyle="#fff";g.font="10px system-ui";g.textAlign="center";g.fillText(Math.max(0,Math.ceil(boss.hp))+" / "+boss.maxHp+" HP",x+width/2,10);g.fillStyle="#091423";g.fillRect(x,12,width,12);g.fillStyle="#f87171";g.fillRect(x,12,width*Math.max(0,boss.hp/boss.maxHp),12);g.fillStyle="#fff";g.font="14px system-ui";g.textAlign="center";g.fillText(boss.name.toUpperCase()+" · "+(boss.hp>0?"PHASE "+boss.phase:"격파"),x+width/2,43);});}else{actor(p,"#278bd5","P1");actor(a,"#df6e79","AI");}for(let b of balls){paintProjectile(g,b);}
+if(raid){raid.team.forEach((o,i)=>{if(o.hp>0)actor(o,i===0?"#278bd5":"#40b99d",i===0?"P1":["","ATK","DEF","SUP"][i]);else if(playing){g.save();g.globalAlpha=.45;actor(o,"#888",""+(i?"B"+i:"P1"));g.restore();g.fillStyle="#fff";g.font="bold 16px system-ui";g.textAlign="center";g.fillText(Math.ceil(Math.max(0,o.reviveAt-raid.clock))+"초",o.x,o.y-36);}});(raid.minions||[]).forEach(o=>{if(playing&&o.hp>0&&o.summoner.hp>0)actor(o,"#f99878","AI");});raid.bosses.forEach((boss,i)=>{if(boss.hp>0)actor(boss,"#df6e79",boss.name.toUpperCase());const width=portraitFocus?raidBossSlot*.84:raid.bosses.length===2?330:560;
+const x=raidBossLabelX(i,raid.bosses.length===2?215+i*370:400)-width/2;g.fillStyle="#fff";g.font="10px system-ui";g.textAlign="center";g.fillText(Math.max(0,Math.ceil(boss.hp))+" / "+boss.maxHp+" HP",x+width/2,10);g.fillStyle="#091423";g.fillRect(x,12,width,12);g.fillStyle="#f87171";g.fillRect(x,12,width*Math.max(0,boss.hp/boss.maxHp),12);g.fillStyle="#fff";g.font="14px system-ui";g.textAlign="center";g.fillText(boss.name.toUpperCase()+" · "+(boss.hp>0?"PHASE "+boss.phase:"격파"),x+width/2,43,portraitFocus?raidBossSlot-8:c.width);});}else{actor(p,"#278bd5","P1");actor(a,"#df6e79","AI");}for(let b of balls){paintProjectile(g,b);}
  const spectating=!!(playing&&raid&&p.hp<=0);c.style.filter=spectating?"grayscale(1)":"";
  if(playing&&raid){const R=raid;const circle=(x,y,r,color)=>{g.save();g.strokeStyle=color;g.lineWidth=4;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.stroke();g.restore();};
- for(const item of (R.items||[])){const [symbol,color]=({heal:["＋","#5ee89b"],speed:["»","#62dcff"],power:["✦","#ffbd65"],shield:["◇","#bca4ff"]})[item.type];g.save();g.fillStyle=color;g.beginPath();g.arc(item.x,item.y,13,0,Math.PI*2);g.fill();g.fillStyle="#10182b";g.font="bold 20px system-ui";g.textAlign="center";g.fillText(symbol,item.x,item.y+7);g.restore();}for(const o of R.team){if(o.hp<=0)continue;const buffs=[];if(t<(o.fastUntil||0))buffs.push("속도");if(t<(o.itemPower||0))buffs.push("강화");if(t<o.shield)buffs.push("보호");if(t<(o.buffNoticeUntil||0)&&o.buffNotice==="heal")buffs.push("회복");if(buffs.length){g.fillStyle="#a7f3d0";g.font="bold 12px system-ui";g.textAlign="center";g.fillText(buffs.join(" · "),o.x,o.y+28);}}if(R.coop&&R.clock<R.coop.until&&R.coop.from.hp>0&&R.coop.to.hp>0){const q=R.coop;g.save();const active=R.clock>=q.until-3;g.strokeStyle=active?"#ff426a":"#f6a5e8";g.lineWidth=active?9:3;g.setLineDash(active?[]:[7,5]);g.beginPath();g.moveTo(q.from.x,q.from.y);g.lineTo(q.to.x,q.to.y);g.stroke();g.restore();g.fillStyle="#f6a5e8";g.font="bold 15px system-ui";g.textAlign="center";g.fillText(q.label,400,90);}
+ for(const item of (R.items||[])){const [symbol,color]=({heal:["＋","#5ee89b"],speed:["»","#62dcff"],power:["✦","#ffbd65"],shield:["◇","#bca4ff"]})[item.type];g.save();g.fillStyle=color;g.beginPath();g.arc(item.x,item.y,13,0,Math.PI*2);g.fill();g.fillStyle="#10182b";g.font="bold 20px system-ui";g.textAlign="center";g.fillText(symbol,item.x,item.y+7);g.restore();}for(const o of R.team){if(o.hp<=0)continue;const buffs=[];if(t<(o.fastUntil||0))buffs.push("속도");if(t<(o.itemPower||0))buffs.push("강화");if(t<o.shield)buffs.push("보호");if(t<(o.buffNoticeUntil||0)&&o.buffNotice==="heal")buffs.push("회복");if(buffs.length){g.fillStyle="#a7f3d0";g.font="bold 12px system-ui";g.textAlign="center";g.fillText(buffs.join(" · "),o.x,o.y+28);}}if(R.coop&&R.clock<R.coop.until&&R.coop.from.hp>0&&R.coop.to.hp>0){const q=R.coop;g.save();const active=R.clock>=q.until-3;g.strokeStyle=active?"#ff426a":"#f6a5e8";g.lineWidth=active?9:3;g.setLineDash(active?[]:[7,5]);g.beginPath();g.moveTo(q.from.x,q.from.y);g.lineTo(q.to.x,q.to.y);g.stroke();g.restore();g.fillStyle="#f6a5e8";g.font="bold 15px system-ui";g.textAlign="center";g.fillText(q.label,arenaCenter,90);}
  for(const q of (R.minionLinks||[])){if(q.from.hp<=0||q.to.hp<=0||q.to.summoner.hp<=0)continue;const active=R.clock>=q.at;g.save();g.strokeStyle=active?"#ff426a":"#f6a5e8";g.lineWidth=active?9:3;g.setLineDash(active?[]:[7,5]);g.beginPath();g.moveTo(q.from.x,q.from.y);g.lineTo(q.to.x,q.to.y);g.stroke();g.restore();}
- if(R.bosses.length===2&&R.bosses.filter(o=>o.hp>0).length===1){g.fillStyle="#ff9b9b";g.font="bold 17px system-ui";g.textAlign="center";g.fillText("남은 보스 광폭화",400,88);}
- R.bosses.forEach((boss,i)=>{if(boss.hp<=0)return;if(boss.prism&&R.clock<boss.prism.until){const angle=boss.prism.angle,dx=Math.cos(angle)*1000,dy=Math.sin(angle)*1000;g.save();g.strokeStyle="#ff426a";g.lineWidth=9;g.beginPath();g.moveTo(boss.x-dx,boss.y-dy);g.lineTo(boss.x+dx,boss.y+dy);g.stroke();g.strokeStyle="#ffc1d0";g.lineWidth=2;g.stroke();g.restore();g.fillStyle="#ffe3a0";g.font="bold 14px system-ui";g.textAlign="center";g.fillText("PRISM · "+Math.ceil(boss.prism.until-R.clock)+"초",R.bosses.length===2?210+i*380:400,68);}if(boss.pending){if(boss.pending.type==="overlord")circle(boss.pending.x,boss.pending.y,145,"#ffcc66");else circle(boss.x,boss.y,38,"#ffcc66");g.fillStyle="#ffe3a0";g.font="bold 16px system-ui";g.textAlign="center";g.fillText(boss.name.toUpperCase()+" · "+boss.notice,R.bosses.length===2?210+i*380:400,68);}if(boss.wave&&R.clock<boss.wave.until)circle(boss.wave.x,boss.wave.y,145,"#ff9e65");});
- if(R.team.filter(o=>o.hp>0).length===1){g.save();g.globalAlpha=.3;g.fillStyle="#eab308";g.fillRect(0,0,800,460);g.restore();g.fillStyle="#fff3ba";g.font="bold 24px system-ui";g.textAlign="center";g.fillText("⚠ 마지막 생존자! 아군 부활까지 버티세요",400,108);}
- if(spectating){g.fillStyle="#111d";g.fillRect(285,120,230,90);g.fillStyle="#fff";g.textAlign="center";g.font="bold 20px system-ui";g.fillText("부활 대기",400,150);g.font="bold 36px system-ui";g.fillText(Math.ceil(Math.max(0,p.reviveAt-R.clock))+"초",400,192);}
- }requestAnimationFrame(frame);}requestAnimationFrame(frame);window.fwPvpControls={keys,aim,movement,specialPressed:()=>performance.now()<onlineSkillUntil,held:()=>held,fireSeq:()=>fireSeq};window.fwPvpStopSolo=()=>{c.style.filter="";raid=null;resetStick();playing=false;setArenaMatchActive(false);armed=false;get("arena-start").disabled=true;get("arena-start").textContent="▶ 경기 시작하기";};
-</script><script type="module" src="./online.js?v=20261127-mobile-arena"></script>
+ if(R.bosses.length===2&&R.bosses.filter(o=>o.hp>0).length===1){g.fillStyle="#ff9b9b";g.font="bold 17px system-ui";g.textAlign="center";g.fillText("남은 보스 광폭화",arenaCenter,88);}
+ R.bosses.forEach((boss,i)=>{if(boss.hp<=0)return;if(boss.prism&&R.clock<boss.prism.until){const angle=boss.prism.angle,dx=Math.cos(angle)*1000,dy=Math.sin(angle)*1000;g.save();g.strokeStyle="#ff426a";g.lineWidth=9;g.beginPath();g.moveTo(boss.x-dx,boss.y-dy);g.lineTo(boss.x+dx,boss.y+dy);g.stroke();g.strokeStyle="#ffc1d0";g.lineWidth=2;g.stroke();g.restore();g.fillStyle="#ffe3a0";g.font="bold 14px system-ui";g.textAlign="center";g.fillText("PRISM · "+Math.ceil(boss.prism.until-R.clock)+"초",raidBossLabelX(i,R.bosses.length===2?210+i*380:400),68,portraitFocus?raidBossSlot-8:c.width);}if(boss.pending){if(boss.pending.type==="overlord")circle(boss.pending.x,boss.pending.y,145,"#ffcc66");else circle(boss.x,boss.y,38,"#ffcc66");g.fillStyle="#ffe3a0";g.font="bold 16px system-ui";g.textAlign="center";g.fillText(boss.name.toUpperCase()+" · "+boss.notice,raidBossLabelX(i,R.bosses.length===2?210+i*380:400),68,portraitFocus?raidBossSlot-8:c.width);}if(boss.wave&&R.clock<boss.wave.until)circle(boss.wave.x,boss.wave.y,145,"#ff9e65");});
+ if(R.team.filter(o=>o.hp>0).length===1){g.save();g.globalAlpha=.3;g.fillStyle="#eab308";g.fillRect(0,0,800,460);g.restore();g.fillStyle="#fff3ba";g.font=portraitFocus?"bold 16px system-ui":"bold 24px system-ui";g.textAlign="center";g.fillText("⚠ 마지막 생존자! 아군 부활까지 버티세요",arenaCenter,108);}
+ if(spectating){g.fillStyle="#111d";g.fillRect(arenaCenter-115,120,230,90);g.fillStyle="#fff";g.textAlign="center";g.font="bold 20px system-ui";g.fillText("부활 대기",arenaCenter,150);g.font="bold 36px system-ui";g.fillText(Math.ceil(Math.max(0,p.reviveAt-R.clock))+"초",arenaCenter,192);}
+ }paintArenaOverview(ms);requestAnimationFrame(frame);}requestAnimationFrame(frame);window.fwPvpControls={keys,aim,movement,specialPressed:()=>performance.now()<onlineSkillUntil,held:()=>held,fireSeq:()=>fireSeq};window.fwPvpStopSolo=()=>{c.style.filter="";raid=null;resetStick();playing=false;setArenaMatchActive(false);armed=false;get("arena-start").disabled=true;get("arena-start").textContent="▶ 경기 시작하기";};
+</script><script type="module" src="./online.js?v=20261127-portrait-camera"></script>
 <style id="secol-share-style">#secol-share-link{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:8000;border:1px solid #aab3c4;border-radius:999px;padding:9px 13px;background:#fff;color:#172033;font:600 13px system-ui;box-shadow:0 2px 10px #0002;cursor:pointer}#secol-share-link:focus-visible{outline:3px solid #e87920;outline-offset:3px}#secol-share-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}</style>
 <button type="button" id="secol-share-link" aria-label="현재 프로젝트 링크 공유">🔗 공유</button><span id="secol-share-status" role="status" aria-live="polite"></span>
 <script>(function(){const b=document.getElementById('secol-share-link'),status=document.getElementById('secol-share-status');if(!b||!status)return;b.addEventListener('click',async()=>{const url=location.origin+location.pathname;try{if(navigator.share){await navigator.share({title:document.title,url});status.textContent='공유 메뉴를 열었습니다.';return}if(navigator.clipboard&&isSecureContext){await navigator.clipboard.writeText(url);status.textContent='프로젝트 주소가 복사되었습니다.';b.textContent='✓ 복사됨';setTimeout(()=>b.textContent='🔗 공유',2000);return}window.prompt('프로젝트 주소를 복사하세요',url);status.textContent='주소를 확인하세요.'}catch(e){if(e.name!=='AbortError'){window.prompt('프로젝트 주소를 복사하세요',url);status.textContent='주소를 확인하세요.'}}})})();</script>
