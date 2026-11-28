@@ -31,9 +31,10 @@
  function updateHUD(){
   const hp=Math.max(0,Number($("hp")?.textContent)||0),foe=Math.max(0,Number($("aihp")?.textContent)||0);
   $("pvp2-my-hp").textContent=Math.ceil(hp)+" HP";$("pvp2-foe-hp").textContent=Math.ceil(foe)+" HP";
-  const max=window.fwPvpOnlineActive?175:205;
-  $("pvp2-my-bar").style.width=Math.min(100,hp/max*100)+"%";
-  $("pvp2-foe-bar").style.width=Math.min(100,foe/max*100)+"%";
+  const maxima=window.fwPvpHealthMaximums||{player:100,opponent:100};
+  const mine=Math.max(1,Number(maxima.player)||100),opponent=Math.max(1,Number(maxima.opponent)||100);
+  $("pvp2-my-bar").style.width=Math.min(100,hp/mine*100)+"%";
+  $("pvp2-foe-bar").style.width=Math.min(100,foe/opponent*100)+"%";
  }
  const observer=new MutationObserver(updateHUD);
  observer.observe($("hp"),{childList:true,characterData:true,subtree:true});observer.observe($("aihp"),{childList:true,characterData:true,subtree:true});updateHUD();
